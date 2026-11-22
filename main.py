@@ -16,7 +16,7 @@ KEY_TO_ACTION = {
 def ref(name: str) -> GameObjectReference:
     return GameObjectReference(get_object_class(name))
 
-LEVEL = [
+LEVELS = [[
     [[],  [],            [],       [],       ["wall"], [],       [],            [],       [],       [],       [],       []],
     [[],  ["baba"],      ["rock"], [],       ["wall"], [],       [],            [],       [],       [],       [],       []],
     [[],  [],            [],       [],       ["wall"], [],       [ref("rock")], [Is],     [Push],   [],       [],       []],
@@ -25,6 +25,16 @@ LEVEL = [
     [[],  [],            [],       [],       [],       [],       [ref("wall")], [Is],     [Stop],   [],       [],       []],
     [[],  [ref("flag")], [Is],     [Win],    [],       [],       [],            [],       [],       [],       [],       []],
     [[],  [],            [],       [],       [],       [],       [],            [],       [],       [],       [],       []],
+],[
+    [[],  [],            [],       [],       ["wall"], [],       [],            [],       [],       [],       [],       []],
+    [[],  ["baba"],      ["rock"], [],       ["wall"], [],       [],            [],       [],       [],       [],       []],
+    [[],  [],            [],       [],       ["wall"], [],       [ref("rock")], [Is],     [Push],   [],       [],       []],
+    [[],  [],            [],       [],       [],       [],       [],            [],       [],       [],       [],       []],
+    [[],  [ref("baba")], [Is],     [You],    [],       [],       [],            [],       [],       [],       ["flag"], []],
+    [[],  [],            [],       [],       [],       [],       [ref("wall")], [Is],     [Stop],   [],       [],       []],
+    [[],  [ref("flag")], [Is],     [Win],    [],       [],       [],            [],       [],       [],       [],       []],
+    [[],  [],            [],       [],       [],       [],       [],            [],       [],       [],       [],       []],
+]
 ]
 
 
@@ -40,36 +50,40 @@ def make_element(spec: str | GameObjectReference | type) -> Element:
     return text
 
 
-def load_level() -> Grid:
-    grid = Grid(len(LEVEL[0]), len(LEVEL))
-    for y, row in enumerate(LEVEL):
+def load_level(level: int) -> Grid:
+    grid = Grid(len(LEVELS[level][0]), len(LEVELS[level]))
+    for y, row in enumerate(LEVELS[level]):
         for x, cell in enumerate(row):
             for spec in cell:
                 grid.add(x, y, make_element(spec))
     return grid
 
 def main(stdscr) -> None:
-    curses.curs_set(0)
-    grid = load_level()
+    for level in range(len(LEVELS)):
+        curses.curs_set(0)
+        grid = load_level(level)
 
-    state = State()
-    state.grid = grid
-    state.rules = []
-    state.update_rules()
+        state = State()
+        state.grid = grid
+        state.rules = []
+        state.update_rules()
 
-    while True:
-        stdscr.erase()
-        stdscr.addstr(0, 0, state.grid.render())
-        if state.won:
-            stdscr.addstr("You win!")
-        else:
-            stdscr.addstr("arrows: move, space: skip, q: quit")
-        key = stdscr.getch()
-        if key == ord("q"):
-            break
-        action = KEY_TO_ACTION.get(key)
-        if action is not None and not state.won:
-            state.game_input(action)
+        while True:
+            stdscr.erase()
+            stdscr.addstr(0, 0, state.grid.render())
+            if state.won:
+                stdscr.addstr("You win! Press any key to continue to next level")
+            else:
+                stdscr.addstr("arrows: move, space: skip, q: quit")
+            key = stdscr.getch()
+            if key == ord("q"):
+                break
+            action = KEY_TO_ACTION.get(key)
+            if action is not None:
+                if not state.won:
+                    state.game_input(action)
+                else:
+                    break
 
 
 if __name__ == "__main__":
