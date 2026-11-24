@@ -72,5 +72,17 @@ class State:
         # global rule that always applies so that the main game mechanic is always accessible
         self.rules.append(Rule(elements.GameObjectReference(elements.Text), elements.Is(), elements.Push()))
 
-                        
-                
+    def key(self) -> tuple[bool, tuple[tuple[str, ...], ...]]:
+        return (
+            self.won,
+            tuple(
+                tuple(str(e) for e in cell.elements)
+                for row in self.grid.grid
+                for cell in row
+            ),
+        )
+
+    # custom equals function that compares only the values of the current State instead of their instances
+    # so that solve algorithms can know if they've already seen this state before
+    def __eq__(self, other: "State") -> bool:
+        return self.key() == other.key()

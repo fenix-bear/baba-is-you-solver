@@ -1,8 +1,10 @@
+import copy
 import curses
 from engine import Grid, Element
 from elements import GameObject, GameObjectReference, Text, get_object_class
 from elements import Is, You, Push, Win, Stop
 from game import INPUT_MAP, State
+import solvers
 
 KEY_TO_ACTION = {
     curses.KEY_UP: "UP",
@@ -63,6 +65,8 @@ def load_level(level: int) -> Grid:
 
 def main(stdscr) -> None:
     for level in range(len(LEVELS)):
+        solving = False
+        history: list[State] = []
         curses.curs_set(0)
         grid = load_level(level)
 
@@ -73,18 +77,43 @@ def main(stdscr) -> None:
 
         while True:
             stdscr.erase()
-            stdscr.addstr(0, 0, state.grid.render())
+            stdscr.addstr(0, 0, state.grid.render() + "\n")
             if state.won:
                 stdscr.addstr("You win! Press any key to continue to next level")
+            elif not solving:
+                stdscr.addstr("arrows: move, space: skip, z: undo, q: quit, b: BFS, d: DFS")
+            if solving and not state.won:
+                stdscr.addstr("Solving...")
+            stdscr.refresh()
+            if solving and not state.won:
+                # `state` becomes the `node` variable in the solver function 
+                action = solver.send(state)
             else:
-                stdscr.addstr("arrows: move, space: skip, q: quit")
-            key = stdscr.getch()
-            if key == ord("q"):
-                break
-            action = KEY_TO_ACTION.get(key)
+                key = stdscr.getch()
+                if key == ord("q"):
+                    break
+                elif key == ord("z"):
+                    action = "UNDO"
+                elif key in [ord("b"), ord("d")]:
+                    solving = True
+                    if key == ord("b"): solver = solvers.bfs(state)
+                    elif key == ord("d"): solver = solvers.dfs(state)
+                    # this is a really weird way of doing things but the next() function
+                    # here allows us to get the next yielded value of this function without
+                    # the function needing to be re-executed during subsequent calls
+                    # meaning that the main and the solver function will have their own separate
+                    # states at the same time and are taking turns executing in a structured way
+                    action = next(solver, None)
+                else:
+                    action = KEY_TO_ACTION.get(key)
             if action is not None:
                 if not state.won:
-                    state.game_input(action)
+                    if action == "UNDO":
+                        if history:
+                            state = history.pop()
+                    else:
+                        history.append(copy.deepcopy(state))
+                        state.game_input(action)
                 else:
                     break
 
